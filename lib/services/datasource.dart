@@ -199,8 +199,8 @@ Future<List<StockSnap>> fetchStockListSina(
   return all;
 }
 
-// 东财列表（备选，字段含振幅f7/量比f10）
-const String _emListFields = 'f12,f14,f2,f3,f5,f6,f7,f8,f10,f9,f23,f20,f21';
+// 东财列表（备选，字段含振幅f7/量比f10；f15最高 f16最低 f17开盘 —— 实测接口确认）
+const String _emListFields = 'f12,f14,f2,f3,f5,f6,f7,f8,f10,f9,f23,f20,f21,f15,f16,f17';
 const String _emListFs =
     'm:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048';
 
@@ -232,6 +232,11 @@ Future<List<StockSnap>> fetchStockListEM(
         name: '${m['f14']}',
         price: _numOf(m['f2']) ?? 0,
         chgPct: _numOf(m['f3']) ?? 0,
+        // StockSnap 的 open/high/low 是必填项；scan.dart 用 high-low 算当日振幅做预筛，
+        // 填 0 会导致东财回退路径下全市场振幅为 0、预筛全部淘汰，故必须取真值 f17/f15/f16
+        open: _numOf(m['f17']) ?? 0,
+        high: _numOf(m['f15']) ?? 0,
+        low: _numOf(m['f16']) ?? 0,
         volume: _numOf(m['f5']) ?? 0,
         amount: _numOf(m['f6']) ?? 0,
         amplitude: _numOf(m['f7']) ?? 0,
@@ -357,7 +362,7 @@ List<Bar> _parseEMKline(List<dynamic> raw) {
       low: double.tryParse(p[4]) ?? 0,
       volume: (double.tryParse(p[5]) ?? 0) * 100, // 东财成交量单位=手，转成股
       amount: double.tryParse(p[6]) ?? 0,
-      amplitude: p.length > 7 ? double.tryParse(p[7]) : null,
+      amplitude: p.length > 7 ? (double.tryParse(p[7]) ?? 0) : 0,
       chgPct: p.length > 8 ? (double.tryParse(p[8]) ?? 0) : 0,
       turnover: p.length > 10 ? double.tryParse(p[10]) : null,
     ));

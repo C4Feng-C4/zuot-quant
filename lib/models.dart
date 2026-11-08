@@ -275,7 +275,7 @@ class BacktestResult {
 }
 
 /// 列表工具：模拟 JS 的 slice(-n)
-List<T> tail(List<T> a, int n) {
+List<T> tail<T>(List<T> a, int n) {
   if (n <= 0) return <T>[];
   if (n >= a.length) return List<T>.from(a);
   return a.sublist(a.length - n);

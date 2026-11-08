@@ -11,6 +11,16 @@ import 'indicators.dart';
 double get nan => double.nan;
 bool _finite(double x) => x.isFinite;
 
+/// dart:math 没有 tanh（JS 的 Math.tanh 在 Dart 中不存在），此处等价实现。
+/// 饱和截断避免 exp(2x) 溢出成 Infinity 后 inf/inf = NaN。
+double _tanh(double x) {
+  if (x.isNaN) return x;
+  if (x >= 20) return 1;
+  if (x <= -20) return -1;
+  final e = math.exp(2 * x);
+  return (e - 1) / (e + 1);
+}
+
 // ---- 可复现随机数（固定种子，与 JS mulberry32 位级一致）----
 class Mulberry32 {
   int _seed;
@@ -59,7 +69,8 @@ Dataset buildDataset(List<Bar> daily, {double labelThreshold = 0.001}) {
     final macdHist = _finite(indicators.macd.hist[i]) ? indicators.macd.hist[i] / c : 0;
     final atrPct = _finite(indicators.atr14[i]) ? indicators.atr14[i] / c : 0;
     final kdjK = _finite(indicators.kdj.k[i]) ? (indicators.kdj.k[i] - 50) / 50 : 0;
-    final feat = [ret1, ret5, ret20, maRatio, vol20, volRatio, rsi, macdHist, atrPct, kdjK]
+    // 显式 <double>：否则三元里的 int 0 会让整个列表推成 List<num>，X.add 处类型不匹配
+    final feat = <double>[ret1, ret5, ret20, maRatio, vol20, volRatio, rsi, macdHist, atrPct, kdjK]
         .map((v) => v.isFinite ? v : 0.0)
         .toList();
     // 标签：次日方向（阈值过滤）
@@ -140,7 +151,7 @@ class MLP {
       for (int i = 0; i < inputSize; i++) {
         s += x[i] * w1[i][j];
       }
-      h[j] = math.tanh(s);
+      h[j] = _tanh(s);
     }
     double o = b2;
     for (int j = 0; j < hiddenSize; j++) {
@@ -226,8 +237,9 @@ EvalResult evaluate(MLP model, List<List<double>> X, List<int> y) {
     }
   }
   final acc = (tp + tn) / X.length;
-  final precision = tp + fp > 0 ? tp / (tp + fp) : 0;
-  final recall = tp + fn > 0 ? tp / (tp + fn) : 0;
+  // 写成 0.0 而非 0：否则三元结果推成 num，传给 EvalResult 的 double 形参会报错
+  final precision = tp + fp > 0 ? tp / (tp + fp) : 0.0;
+  final recall = tp + fn > 0 ? tp / (tp + fn) : 0.0;
   return EvalResult(acc, precision, recall,
       precision + recall > 0 ? 2 * precision * recall / (precision + recall) : 0, tp, tn, fp, fn, probs);
 }

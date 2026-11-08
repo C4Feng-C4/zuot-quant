@@ -47,7 +47,7 @@ BacktestMetrics perfMetrics(List<Trade> trades, List<double> equity, [int tradin
     winRate: btRound(wins.length / n * 100, 1),
     trades: n,
     maxDrawdown: btRound(mdd * 100),
-    sharpe: btRound(sharpe),
+    sharpe: btRound(sharpe.toDouble()),
     profitFactor: grossLoss > 0 ? btRound(grossWin / grossLoss) : (grossWin > 0 ? 99 : 0),
     avgWin: wins.isNotEmpty ? btRound(grossWin / wins.length * 100) : 0,
     avgLoss: losses.isNotEmpty ? btRound(grossLoss / losses.length * 100) : 0,
