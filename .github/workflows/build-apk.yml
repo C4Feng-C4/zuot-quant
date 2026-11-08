@@ -58,7 +58,7 @@ jobs:
 
       # 快速门禁：不吞掉 analyze 的失败，类型错误在 1-2 分钟内就暴露，不用等 10 分钟 Gradle
       - name: Analyze
-        run: flutter analyze --no-fatal-infos--no-fatal-warnings
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Build APK (release)
         run: flutter build apk --release
