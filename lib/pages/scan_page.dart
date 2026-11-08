@@ -18,6 +18,25 @@ class ScanPage extends StatefulWidget {
 
 class _ScanPageState extends State<ScanPage> {
   @override
+  void initState() {
+    super.initState();
+    // appState 是 ChangeNotifier，但本页此前从未注册监听：
+    // st.update() 的 notifyListeners() 没有任何订阅者，界面因此完全不刷新，
+    // 表现为「点开始扫描毫无反应」（其实扫描已在后台跑，结果也写进了 state）
+    appState.addListener(_onAppState);
+  }
+
+  void _onAppState() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    appState.removeListener(_onAppState);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final st = appState;
     return Column(
@@ -75,9 +94,17 @@ class _ScanPageState extends State<ScanPage> {
         Expanded(
           child: st.results.isEmpty
               ? Center(
-                  child: Text(
-                    st.scanning ? '正在扫描…' : '点击「开始扫描」全A股做T适配度排名',
-                    style: const TextStyle(color: Colors.black45),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      st.scanning
+                          ? '正在扫描…'
+                          : (st.progressText.isNotEmpty
+                              ? st.progressText
+                              : '点击「开始扫描」全A股做T适配度排名'),
+                      style: const TextStyle(color: Colors.black45),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 )
               : ListView.builder(
@@ -120,10 +147,13 @@ class _ScanPageState extends State<ScanPage> {
     );
     st.update((s) {
       s.scanning = false;
-      s.progressText = '';
       if (report['ok'] == true) {
+        s.progressText = '';
         s.scanReport = report;
         s.results = List<ScoreResult>.from(report['results'] as List);
+      } else {
+        // 失败原因常驻显示在页面中央（SnackBar 几秒就消失，容易错过）
+        s.progressText = '扫描失败: ${report['reason']}';
       }
     });
     if (!mounted) return;
