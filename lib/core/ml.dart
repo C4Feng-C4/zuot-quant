@@ -69,9 +69,10 @@ Dataset buildDataset(List<Bar> daily, {double labelThreshold = 0.001}) {
     final macdHist = _finite(indicators.macd.hist[i]) ? indicators.macd.hist[i] / c : 0;
     final atrPct = _finite(indicators.atr14[i]) ? indicators.atr14[i] / c : 0;
     final kdjK = _finite(indicators.kdj.k[i]) ? (indicators.kdj.k[i] - 50) / 50 : 0;
-    // 显式 <double>：否则三元里的 int 0 会让整个列表推成 List<num>，X.add 处类型不匹配
-    final feat = <double>[ret1, ret5, ret20, maRatio, vol20, volRatio, rsi, macdHist, atrPct, kdjK]
-        .map((v) => v.isFinite ? v : 0.0)
+    // 用 toDouble() 兜底：这些元素变量本身可能被推成 num（第1轮日志的 List<num> 即为证据），
+    // 给列表加 <double> 标注反而会让每个元素报错，故此处逐元素显式转 double
+    final feat = [ret1, ret5, ret20, maRatio, vol20, volRatio, rsi, macdHist, atrPct, kdjK]
+        .map((v) => v.isFinite ? v.toDouble() : 0.0)
         .toList();
     // 标签：次日方向（阈值过滤）
     final nextRet = close[i + 1] / c - 1;
@@ -318,7 +319,8 @@ Map<String, dynamic> walkForward(List<Bar> daily, {Map<String, dynamic>? cfg}) {
     }
   }
   final acc = allTestY.isEmpty ? 0.0 : (tp + tn) / allTestY.length;
-  final precision = tp + fp > 0 ? tp / (tp + fp) : 0;
+  // 写成 0.0：walkForward 里这是第二个同名 precision（与 evaluate() 里那个独立），上轮漏改
+  final precision = tp + fp > 0 ? tp / (tp + fp) : 0.0;
   // 模拟"按预测信号交易"的样本外真实收益（概率>probThreshold 次日买入，持有1日）
   double stratRet = 0;
   int stratTrades = 0, stratWins = 0;
